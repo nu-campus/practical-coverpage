@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Create and download a practical notebook cover page as an A4 PDF.">
+<title>Practical Cover Page Generator</title>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box}
+:root{--ink:#1d2330;--brand:#1f3a5f;--line:#c9cfda;--bg:#eef1f5}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+.top{background:var(--brand);color:#fff;padding:16px 20px}
+.top h1{margin:0;font-size:1.15rem}
+.top p{margin:4px 0 0;font-size:.85rem;opacity:.85}
+main{display:grid;grid-template-columns:380px minmax(0,1fr);gap:20px;max-width:1000px;margin:20px auto;padding:0 16px}
+.card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.preview{position:sticky;top:16px;align-self:start;max-width:560px;width:100%;margin:0 auto}
+h2{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:#5b6577;margin:18px 0 0}
+h2:first-child{margin-top:0}
+label{display:block;font-size:.82rem;font-weight:600;margin:10px 0 3px}
+input[type=text]{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;font-size:16px;background:#fff;color:var(--ink)}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+details{margin-top:18px;border-top:1px solid #e4e8ee;padding-top:10px}
+summary{cursor:pointer;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:#5b6577;font-weight:600}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.bar{display:flex;gap:8px;margin-top:20px}
+button{font:inherit;font-weight:600;padding:12px;border:0;border-radius:8px;cursor:pointer;background:#e4e8ee;color:var(--ink)}
+button.pri{background:var(--brand);color:#fff;flex:1}
+button.sm{padding:7px 10px;font-size:.82rem}
+button:disabled{opacity:.6;cursor:wait}
+.link{background:none;color:#8a3b3b;padding:8px 0;margin-top:8px;font-size:.85rem;font-weight:500;text-decoration:underline}
+.tabs{display:none}
+#wrap{position:relative;width:100%;height:0;padding-bottom:141.42%;overflow:hidden;background:#dfe3ea;border-radius:4px}
+#cover{position:absolute;top:0;left:0;width:210mm;height:297mm;background:#fff;color:#000;font-family:"Times New Roman",Times,"Liberation Serif",serif;display:flex;transform-origin:top left}
+.outer{padding:5mm;border:1px solid #000;width:100%;height:100%}
+.inner{border:2px solid #000;width:100%;height:100%;position:relative;overflow:hidden}
+.wm{position:absolute;top:50%;left:50%;width:150mm;height:150mm;transform:translate(-50%,-50%);object-fit:contain;opacity:.12;z-index:1}
+.content{position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;padding:10mm}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:6mm}
+.head h1{font-family:sans-serif;font-size:22pt;font-weight:bold;margin:10mm 1mm 1mm 5mm;letter-spacing:1px;text-transform:uppercase;overflow-wrap:anywhere}
+.head p{font-family:sans-serif;font-size:22pt;margin:1mm 1mm 1mm 5mm;overflow-wrap:anywhere}
+.logo{width:37mm;height:auto;flex:none;margin:10mm 5mm 1mm 1mm}
+.body{flex-grow:1;display:flex;flex-direction:column;margin:1mm}
+.title{font-size:22pt;font-weight:bold;margin:15mm 1mm 1mm 5mm}
+table{border-collapse:collapse;table-layout:fixed;font-size:18pt;width:100%;max-width:165mm;margin:5mm 1mm 1mm 5mm}
+td{padding:2px 2px 2px 10px;vertical-align:bottom;overflow-wrap:anywhere}
+td:first-child{width:44%}
+td:nth-child(2){width:6%}
+td:last-child:empty{border-bottom:1px dotted #000}
+.sub{margin-top:auto;margin-bottom:12mm}
+.subt{font-size:18pt;font-style:italic;margin:0 0 5mm 5mm}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:8px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10;max-width:90vw}
+#toast.on{opacity:1}
+.spin{display:inline-block;width:14px;height:14px;margin-right:6px;vertical-align:-2px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+@media(max-width:800px){
+  main{grid-template-columns:1fr;margin-top:12px;padding-bottom:84px}
+  .tabs{display:flex;gap:6px;max-width:1000px;margin:12px auto 0;padding:0 16px}
+  .tabs button{flex:1;background:#fff}
+  .tabs button[aria-selected=true]{background:var(--brand);color:#fff}
+  body[data-tab=edit] .preview,body[data-tab=view] .form{display:none}
+  .preview{position:static}
+  .bar{position:fixed;left:0;right:0;bottom:0;margin:0;padding:10px 16px;background:#fff;box-shadow:0 -2px 8px rgba(0,0,0,.12);z-index:5}
+}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .top,.tabs,.form,#toast{display:none!important}
+  main{display:block;margin:0;padding:0;max-width:none}
+  .preview{position:static;box-shadow:none;padding:0;margin:0;max-width:none;display:block!important}
+  #wrap{height:auto;padding:0;overflow:visible;background:none;border-radius:0}
+  #cover{position:static;transform:none!important}
+}
+</style>
+</head>
+<body data-tab="edit">
+<div class="top">
+  <h1>Practical Cover Page Generator</h1>
+  <p>Fill in your details, check the preview, then download the PDF.</p>
+</div>
+<div class="tabs" role="tablist">
+  <button role="tab" id="tab-edit" aria-selected="true">Edit</button>
+  <button role="tab" id="tab-view" aria-selected="false">Preview</button>
+</div>
+<main>
+  <section class="card form" aria-label="Details">
+    <h2>Course</h2>
+    <label for="department">Department</label><input type="text" id="department" value="Mathematics" autocomplete="off">
+    <label for="course-title">Course Title</label><input type="text" id="course-title" value="Chemistry-I" autocomplete="off">
+    <label for="course-code">Course Code</label><input type="text" id="course-code" value="212808" inputmode="numeric" autocomplete="off">
+    <label for="session">Session</label><input type="text" id="session" value="2023-24" autocomplete="off">
+    <h2>Student</h2>
+    <label for="name">Name</label><input type="text" id="name" placeholder="Your full name" autocomplete="name">
+    <label for="academic-year">Academic Year</label><input type="text" id="academic-year" value="Hons. 1st year" autocomplete="off">
+    <label for="exam-code">Examination Code</label><input type="text" id="exam-code" placeholder="e.g., 2201" inputmode="numeric" autocomplete="off">
+    <label for="class-roll">Class Roll No.</label><input type="text" id="class-roll" placeholder="e.g., 50" inputmode="numeric" autocomplete="off">
+    <label for="roll-no">Roll No.</label><input type="text" id="roll-no" placeholder="University roll number" inputmode="numeric" autocomplete="off">
+    <label for="reg-no">Registration No.</label><input type="text" id="reg-no" placeholder="University registration number" inputmode="numeric" autocomplete="off">
+    <details>
+      <summary>Institution &amp; logo</summary>
+      <label for="institution">Institution name</label><input type="text" id="institution" value="GOVT. SAADAT COLLEGE" autocomplete="off">
+      <label for="place">Location</label><input type="text" id="place" value="Karatia, Tangail." autocomplete="off">
+      <label for="title">Cover title</label><input type="text" id="title" value="Practical Notebook" autocomplete="off">
+      <label>Watermark</label>
+      <div class="row"><label style="margin:0;font-weight:500"><input type="checkbox" id="wm-on" checked> Show centre watermark</label></div>
+      <label for="wm-op">Watermark strength</label><input type="range" id="wm-op" min="4" max="30" value="12" style="width:100%">
+      <label>Logo</label>
+      <div class="row">
+        <button type="button" class="sm" id="logo-btn">Upload logo</button>
+        <button type="button" class="sm" id="logo-reset">Use default</button>
+        <input type="file" id="logo-file" accept="image/*" hidden>
+      </div>
+    </details>
+    <div class="bar">
+      <button class="pri" id="dl">Download PDF</button>
+      <button id="print">Print</button>
+    </div>
+    <button class="link" id="reset">Reset everything</button>
+  </section>
+
+  <section class="card preview" aria-label="Preview">
+    <div id="wrap">
+      <div id="cover"><div class="outer"><div class="inner">
+        <img src="logo.png" class="wm lg" alt="">
+        <div class="content">
+          <div class="head">
+            <div><h1 id="p-institution"></h1><p id="p-place"></p></div>
+            <img src="logo.png" class="logo lg" alt="Institution logo">
+          </div>
+          <div class="body">
+            <div class="title" id="p-title"></div>
+            <table><tbody>
+              <tr><td>Department</td><td>:</td><td id="p-department"></td></tr>
+              <tr><td>Course Title</td><td>:</td><td id="p-course-title"></td></tr>
+              <tr><td>Course Code</td><td>:</td><td id="p-course-code"></td></tr>
+              <tr><td>Session</td><td>:</td><td id="p-session"></td></tr>
+            </tbody></table>
+            <div class="sub">
+              <p class="subt">Submitted by &mdash;</p>
+              <table><tbody>
+                <tr><td>Name</td><td>:</td><td id="p-name"></td></tr>
+                <tr><td>Academic Year</td><td>:</td><td id="p-academic-year"></td></tr>
+                <tr><td>Examination Code</td><td>:</td><td id="p-exam-code"></td></tr>
+                <tr><td>Class Roll No.</td><td>:</td><td id="p-class-roll"></td></tr>
+                <tr><td>Roll No.</td><td>:</td><td id="p-roll-no"></td></tr>
+                <tr><td>Registration No.</td><td>:</td><td id="p-reg-no"></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+      </div></div></div>
+    </div>
+  </section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+const fields=['institution','place','title','department','course-title','course-code','session','name','academic-year','exam-code','class-roll','roll-no','reg-no'];
+const KEY='practicalCoverGeneratorData',LOGO_KEY='practicalCoverGeneratorLogo',DEFAULT_LOGO='logo.png';
+const $=id=>document.getElementById(id);
+const WM_KEY='practicalCoverGeneratorWm';
+const cover=$('cover'),wrap=$('wrap'),dl=$('dl');
+const defaults={};fields.forEach(f=>defaults[f]=$(f).value);
+
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('on'),2600)}
+function scale(){const w=wrap.clientWidth;if(w)cover.style.transform='scale('+w/cover.offsetWidth+')'}
+function render(){fields.forEach(f=>$('p-'+f).textContent=$(f).value.trim())}
+function store(k,v){try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+function save(){const d={};fields.forEach(f=>d[f]=$(f).value);store(KEY,JSON.stringify(d))}
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(KEY));if(d)fields.forEach(f=>{if(typeof d[f]==='string')$(f).value=d[f]})}catch(e){}
+  try{const w=JSON.parse(localStorage.getItem(WM_KEY));if(w){$('wm-on').checked=!!w.on;$('wm-op').value=w.op}}catch(e){}
+  try{const l=localStorage.getItem(LOGO_KEY);if(l)setLogo(l)}catch(e){}
+}
+function applyWm(){const m=document.querySelector('.wm');m.style.display=$('wm-on').checked?'':'none';m.style.opacity=$('wm-op').value/100}
+function saveWm(){applyWm();store(WM_KEY,JSON.stringify({on:$('wm-on').checked,op:$('wm-op').value}))}
+$('wm-on').onchange=$('wm-op').oninput=saveWm;
+function setLogo(src){document.querySelectorAll('.lg').forEach(i=>{i.style.visibility='visible';i.src=src})}
+document.querySelectorAll('.lg').forEach(i=>i.addEventListener('error',()=>{i.style.visibility='hidden'}));
+
+fields.forEach(f=>$(f).addEventListener('input',()=>{render();save()}));
+
+$('logo-btn').onclick=()=>$('logo-file').click();
+$('logo-file').onchange=e=>{
+  const file=e.target.files[0];if(!file)return;
+  const url=URL.createObjectURL(file),img=new Image();
+  img.onload=()=>{
+    const r=Math.min(1,700/Math.max(img.width,img.height)),c=document.createElement('canvas');
+    c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const data=c.toDataURL('image/png');setLogo(data);store(LOGO_KEY,data);URL.revokeObjectURL(url);toast('Logo updated');
+  };
+  img.onerror=()=>toast('That file could not be read as an image');
+  img.src=url;e.target.value='';
+};
+$('logo-reset').onclick=()=>{setLogo(DEFAULT_LOGO);store(LOGO_KEY,null);toast('Default logo restored')};
+
+$('reset').onclick=()=>{
+  if(!confirm('Reset all fields and the logo to their defaults?'))return;
+  fields.forEach(f=>$(f).value=defaults[f]);store(KEY,null);store(LOGO_KEY,null);store(WM_KEY,null);$('wm-on').checked=true;$('wm-op').value=12;applyWm();setLogo(DEFAULT_LOGO);render();toast('Reset');
+};
+
+function tab(t){
+  document.body.dataset.tab=t;
+  $('tab-edit').setAttribute('aria-selected',t==='edit');$('tab-view').setAttribute('aria-selected',t==='view');
+  requestAnimationFrame(scale);
+}
+$('tab-edit').onclick=()=>tab('edit');$('tab-view').onclick=()=>tab('view');
+
+dl.onclick=async()=>{
+  if(!window.html2canvas||!window.jspdf){toast('PDF tools are still loading. Check your connection and try again.');return}
+  const label=dl.innerHTML;dl.disabled=true;dl.innerHTML='<span class="spin"></span>Creating…';
+  try{
+    await (document.fonts&&document.fonts.ready);
+    const canvas=await html2canvas(cover,{scale:3,useCORS:true,logging:false,scrollX:0,scrollY:0,
+      onclone:d=>{
+        const w=d.getElementById('wrap'),c=d.getElementById('cover');
+        w.style.cssText='height:auto;padding:0;overflow:visible;position:static';
+        c.style.position='relative';c.style.transform='none';
+      }});
+    const pdf=new window.jspdf.jsPDF('p','mm','a4');
+    pdf.addImage(canvas.toDataURL('image/png',1),'PNG',0,0,210,297,'','FAST');
+    const n=$('name').value.trim().replace(/[^\p{L}\p{N}._-]+/gu,'_');
+    pdf.save((n?n+'_':'')+'Practical_Cover.pdf');
+    toast('PDF downloaded');
+  }catch(e){console.error(e);toast('Could not create the PDF. Please try again.')}
+  dl.disabled=false;dl.innerHTML=label;
+};
+$('print').onclick=()=>window.print();
+
+load();render();applyWm();scale();
+new ResizeObserver(scale).observe(wrap);
+window.addEventListener('load',scale);
+</script>
+</body>
+</html>
